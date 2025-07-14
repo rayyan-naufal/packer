@@ -3,11 +3,11 @@ import { Location, Item } from './types';
 
 // Kita sudah tidak menggunakan array CATEGORIES statis lagi, jadi baris itu sudah dihapus.
 
-export const LOCATIONS: Location[] = [
-  Location.Bag,
-  Location.House,
-  Location.Dorm,
-];
+//export const LOCATIONS: Location[] = [
+//  Location.Bag,
+//  Location.House,
+//  Location.Dorm,
+//];
 
 // Data awal ini bisa Anda hapus atau biarkan untuk referensi.
 // Aplikasi tidak akan menggunakannya lagi karena data item akan diambil dari database.

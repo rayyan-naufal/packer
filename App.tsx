@@ -1,16 +1,20 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-// Perhatikan path yang sudah diperbaiki di sini
-import { Item, Location } from './types'; 
-import { LogoIcon, LOCATIONS } from './constants';
+import { Item } from './types';
+import { LogoIcon } from './constants';
 import FilterControls from './components/FilterControls';
 import { ItemTable } from './components/ItemTable';
 import MoveItemsDialog from './components/MoveItemsDialog';
 import { AddItemForm } from './components/AddItemForm';
+import { SettingsPage } from './components/SettingsPage'; // Import halaman baru
 
-interface CategoryFromDB {
+// Tipe data umum untuk Kategori dan Lokasi
+interface DataItem {
   id: number;
   name: string;
 }
+
+// Tipe untuk membedakan tampilan
+type View = 'main' | 'settings';
 
 // Definisikan tipe untuk konfigurasi sorting
 type SortConfig = {
@@ -19,82 +23,118 @@ type SortConfig = {
 };
 
 const App: React.FC = () => {
+  // State untuk data
   const [items, setItems] = useState<Item[]>([]);
-  const [categories, setCategories] = useState<CategoryFromDB[]>([]);
+  const [categories, setCategories] = useState<DataItem[]>([]);
+  const [locations, setLocations] = useState<DataItem[]>([]);
+  
+  // State untuk UI
+  const [view, setView] = useState<View>('main');
   const [categoryFilter, setCategoryFilter] = useState<string | 'All'>('All');
-  const [locationFilter, setLocationFilter] = useState<Location | 'All'>('All');
+  const [locationFilter, setLocationFilter] = useState<string | 'All'>('All');
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: '#', direction: 'ascending' });
 
-  const fetchItems = useCallback(async () => {
+  // Fungsi untuk mengambil semua data dari server
+  const fetchAllData = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/items');
-      const data = await response.json();
-      setItems(data);
+      const [itemsRes, catRes, locRes] = await Promise.all([
+        fetch('http://localhost:3001/api/items'),
+        fetch('http://localhost:3001/api/categories'),
+        fetch('http://localhost:3001/api/locations'),
+      ]);
+      const itemsData = await itemsRes.json();
+      const catData = await catRes.json();
+      const locData = await locRes.json();
+      setItems(itemsData);
+      setCategories(catData);
+      setLocations(locData);
     } catch (err) {
-      console.error("Gagal mengambil item:", err);
+      console.error("Gagal mengambil semua data:", err);
     }
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/categories')
-      .then(res => res.json())
-      .then(data => setCategories(data))
-      .catch(err => console.error("Gagal mengambil kategori:", err));
-    
-    fetchItems();
-  }, [fetchItems]);
+    fetchAllData();
+  }, [fetchAllData]);
 
-  const handleAddItem = async (itemData: { name: string; category_id: number; location: Location; note: string }) => {
+  // --- HANDLER UNTUK SEMUA AKSI ---
+
+  const handleApiAction = async (url: string, options: RequestInit) => {
     try {
-      await fetch('http://localhost:3001/api/items', {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message);
+        }
+        await fetchAllData(); // Ambil ulang semua data setelah aksi berhasil
+    } catch (err) {
+        alert('Terjadi kesalahan: ' + (err as Error).message);
+    }
+  };
+
+  const handleCategoryUpdate = (action: 'add' | 'update' | 'delete', data: { id?: number, name?: string }) => {
+    const { id, name } = data;
+    let url = 'http://localhost:3001/api/categories';
+    let options: RequestInit = {
+        method: action === 'add' ? 'POST' : (action === 'update' ? 'PUT' : 'DELETE'),
+        headers: { 'Content-Type': 'application/json' },
+    };
+    if (action === 'update' || action === 'delete') url += `/${id}`;
+    if (action !== 'delete') options.body = JSON.stringify({ name });
+    handleApiAction(url, options);
+  };
+  
+  const handleLocationUpdate = (action: 'add' | 'update' | 'delete', data: { id?: number, name?: string }) => {
+    const { id, name } = data;
+    let url = 'http://localhost:3001/api/locations';
+    let options: RequestInit = {
+        method: action === 'add' ? 'POST' : (action === 'update' ? 'PUT' : 'DELETE'),
+        headers: { 'Content-Type': 'application/json' },
+    };
+    if (action === 'update' || action === 'delete') url += `/${id}`;
+    if (action !== 'delete') options.body = JSON.stringify({ name });
+    handleApiAction(url, options);
+  };
+  
+  const handleAddItem = async (itemData: { name: string; category_id: number; location_id: number; note: string }) => {
+    await handleApiAction('http://localhost:3001/api/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(itemData),
-      });
-      await fetchItems();
-      setShowAddForm(false);
-    } catch (err) {
-      alert('Terjadi kesalahan saat menambahkan barang.');
-    }
+    });
+    setShowAddForm(false);
   };
-
-  const handleUpdateItem = async (id: number, updatedValues: { location?: Location; category?: string }) => {
+  
+  const handleUpdateItem = async (id: number, updatedValues: { location?: string; category?: string }) => {
     let body = {};
     if (updatedValues.location) {
-        body = { location: updatedValues.location };
+        const location = locations.find(l => l.name === updatedValues.location);
+        if (location) body = { location_id: location.id };
     } else if (updatedValues.category) {
         const category = categories.find(c => c.name === updatedValues.category);
-        if (category) { body = { category_id: category.id }; }
+        if (category) body = { category_id: category.id };
     }
     if (Object.keys(body).length > 0) {
-        try {
-            await fetch(`http://localhost:3001/api/items/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-            await fetchItems();
-        } catch (err) {
-            alert('Terjadi kesalahan saat mengedit barang.');
-        }
+        await handleApiAction(`http://localhost:3001/api/items/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
     }
   };
 
-  const handleMoveAllFromBag = async (destination: Location) => {
-    try {
-        await fetch('http://localhost:3001/api/items/move-all-from-bag', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ destination }),
-        });
-        await fetchItems();
-        setIsMoveModalOpen(false);
-    } catch (err) {
-        alert('Terjadi kesalahan saat memindahkan barang.');
-    }
+  const handleMoveAllFromBag = async (destination: string) => {
+    await handleApiAction('http://localhost:3001/api/items/move-all-from-bag', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination }),
+    });
+    setIsMoveModalOpen(false);
   };
+  
+  // --- LOGIKA FILTER & SORT ---
 
   const requestSort = (key: keyof Item | '#') => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -104,87 +144,97 @@ const App: React.FC = () => {
     setSortConfig({ key, direction });
   };
 
-  // === BLOK LOGIKA DIPERBAIKI DI SINI ===
   const processedItems = useMemo(() => {
-    // 1. Filter data
     let processableItems = items.filter(item => {
       const categoryMatch = categoryFilter === 'All' || item.category === categoryFilter;
       const locationMatch = locationFilter === 'All' || item.location === locationFilter;
       return categoryMatch && locationMatch;
     });
 
-    // 2. Urutkan data yang sudah difilter
     if (sortConfig !== null) {
-      // Buat salinan array sebelum diurutkan untuk menghindari mutasi
       processableItems = [...processableItems].sort((a, b) => {
-        // Jika key bukan '#', lakukan pengurutan alfabetis/numerik
         if (sortConfig.key !== '#') {
-          const key = sortConfig.key as keyof Item; // Pastikan key adalah properti dari Item
-          if (a[key] < b[key]) {
-            return sortConfig.direction === 'ascending' ? -1 : 1;
-          }
-          if (a[key] > b[key]) {
-            return sortConfig.direction === 'ascending' ? 1 : -1;
-          }
+          const key = sortConfig.key as keyof Item;
+          if (a[key] < b[key]) return sortConfig.direction === 'ascending' ? -1 : 1;
+          if (a[key] > b[key]) return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
       });
     }
     
-    // 3. Jika sort by # descending, kita reverse array yang sudah difilter
-    // (Urutan ascending by # adalah urutan default dari database)
     if (sortConfig?.key === '#' && sortConfig.direction === 'descending') {
         return processableItems.reverse();
     }
-
     return processableItems;
   }, [items, categoryFilter, locationFilter, sortConfig]);
 
-
   const itemsInBagCount = useMemo(() => {
-    return items.filter(item => item && item.location === Location.Bag).length;
+    return items.filter(item => item && item.location === 'Bag').length;
   }, [items]);
+
+  // --- IKON & RENDER ---
+
+  const SettingsIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+  );
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <div className="flex items-center space-x-3 mb-2">
+        <header className="mb-8 flex justify-between items-center">
+          <div className="flex items-center space-x-3">
             <div className="bg-blue-600 text-white p-2 rounded-lg"><LogoIcon /></div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Student Packer</h1>
           </div>
+          <button onClick={() => setView(view === 'main' ? 'settings' : 'main')} title="Pengaturan" className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
+            <SettingsIcon />
+          </button>
         </header>
 
         <main>
-          {!showAddForm && (
-            <div className="mb-6 text-right">
-              <button onClick={() => setShowAddForm(true)} className="px-5 py-2.5 text-sm font-semibold rounded-md bg-blue-600 text-white shadow-md hover:bg-blue-700">
-                + Tambah Barang Baru
-              </button>
-            </div>
-          )}
-          {showAddForm && <AddItemForm categories={categories} onAddItem={handleAddItem} onCancel={() => setShowAddForm(false)} />}
-
-          <div className="bg-white dark:bg-slate-800/50 rounded-xl shadow-lg p-6 mt-6">
-            <FilterControls
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              locationFilter={locationFilter}
-              setLocationFilter={setLocationFilter}
-              onMoveAllFromBagClick={() => setIsMoveModalOpen(true)}
-              itemsInBagCount={itemsInBagCount}
+          {view === 'settings' ? (
+            <SettingsPage 
               categories={categories}
+              locations={locations}
+              onCategoryUpdate={handleCategoryUpdate}
+              onLocationUpdate={handleLocationUpdate}
+              onBack={() => setView('main')}
             />
-            <div className="mt-6">
-              <ItemTable 
-                items={processedItems} 
-                onUpdateItem={handleUpdateItem} 
-                categories={categories}
-                requestSort={requestSort}
-                sortConfig={sortConfig}
-              />
-            </div>
-          </div>
+          ) : (
+            <>
+              {!showAddForm && (
+                <div className="mb-6 text-right">
+                  <button onClick={() => setShowAddForm(true)} className="px-5 py-2.5 text-sm font-semibold rounded-md bg-blue-600 text-white shadow-md hover:bg-blue-700">
+                    + Tambah Barang Baru
+                  </button>
+                </div>
+              )}
+              {showAddForm && <AddItemForm categories={categories} locations={locations} onAddItem={handleAddItem} onCancel={() => setShowAddForm(false)} />}
+
+              <div className="bg-white dark:bg-slate-800/50 rounded-xl shadow-lg p-6 mt-6">
+                <FilterControls
+                  categoryFilter={categoryFilter}
+                  setCategoryFilter={setCategoryFilter}
+                  locationFilter={locationFilter}
+                  setLocationFilter={setLocationFilter}
+                  onMoveAllFromBagClick={() => setIsMoveModalOpen(true)}
+                  itemsInBagCount={itemsInBagCount}
+                  categories={categories.map(c => c.name)}
+                  locations={locations.map(l => l.name)}
+                />
+                <div className="mt-6">
+                  <ItemTable 
+                    items={processedItems} 
+                    onUpdateItem={handleUpdateItem} 
+                    categories={categories}
+                    locations={locations}
+                    requestSort={requestSort}
+                    sortConfig={sortConfig}
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </main>
       </div>
       
@@ -193,7 +243,7 @@ const App: React.FC = () => {
         onClose={() => setIsMoveModalOpen(false)}
         onConfirm={handleMoveAllFromBag}
         itemCount={itemsInBagCount}
-        locations={LOCATIONS}
+        locations={locations.map(l => l.name)}
       />
     </div>
   );
