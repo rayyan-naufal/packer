@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Item, Location } from './types';
+import { Item, Location } from '../types';
 import { LogoIcon, LOCATIONS } from './constants';
 import FilterControls from './components/FilterControls';
 import { ItemTable } from './components/ItemTable';
