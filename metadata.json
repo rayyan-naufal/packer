@@ -1,0 +1,6 @@
+{
+  "name": "Student Packer",
+  "description": "An application to help students track items to bring between their dorm and house, ensuring nothing is left behind.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
