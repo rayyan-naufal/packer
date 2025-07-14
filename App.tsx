@@ -65,7 +65,9 @@ const App: React.FC = () => {
   };
 
   const filteredItems = useMemo(() => {
+    // Mengembalikan logika filter ke dalam useMemo
     return items.filter(item => {
+      if (!item) return false; // Pengaman jika ada data null/undefined
       const categoryMatch = categoryFilter === 'All' || item.category === categoryFilter;
       const locationMatch = locationFilter === 'All' || item.location === locationFilter;
       return categoryMatch && locationMatch;
@@ -73,7 +75,7 @@ const App: React.FC = () => {
   }, [items, categoryFilter, locationFilter]);
 
   const itemsInBagCount = useMemo(() => {
-    return items.filter(item => item.location === Location.Bag).length;
+    return items.filter(item => item && item.location === Location.Bag).length;
   }, [items]);
 
   return (
@@ -124,6 +126,17 @@ const App: React.FC = () => {
               categories={categories}
             />
             <div className="mt-6">
+              {/* === BLOK DEBUGGING BARU === */}
+              {/* Blok ini akan muncul HANYA jika ada masalah rendering */}
+              {filteredItems.length === 0 && items.length > 0 && (
+                <div className="text-center py-10 px-4 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 rounded-lg">
+                  <p className="font-bold">Pesan Debugging:</p>
+                  <p>Ada <span className="font-bold">{items.length}</span> barang di dalam data, tetapi tidak ada yang ditampilkan.</p>
+                  <p>Ini biasanya terjadi karena masalah rendering atau format data yang tidak cocok.</p>
+                  <p className="mt-2 text-xs">Filter saat ini: Kategori '{categoryFilter}', Lokasi '{locationFilter}'</p>
+                </div>
+              )}
+              
               <ItemTable
                 items={filteredItems}
                 onUpdateItem={handleUpdateItem}
