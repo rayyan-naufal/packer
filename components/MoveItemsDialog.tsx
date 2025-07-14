@@ -1,27 +1,25 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Location } from '../types';
 
 interface MoveItemsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (destination: Location) => void;
+  onConfirm: (destination: string) => void; // Menerima string, bukan enum
   itemCount: number;
-  locations: Location[];
+  locations: string[]; // Menerima array of strings
 }
 
 const MoveItemsDialog: React.FC<MoveItemsDialogProps> = ({ isOpen, onClose, onConfirm, itemCount, locations }) => {
-  const possibleDestinations = useMemo(() => locations.filter(l => l !== Location.Bag), [locations]);
+  // Filter 'Bag' dari daftar tujuan yang mungkin
+  const possibleDestinations = useMemo(() => locations.filter(l => l !== 'Bag'), [locations]);
 
-  const [destination, setDestination] = useState<Location | ''>('');
+  const [destination, setDestination] = useState<string>('');
 
   useEffect(() => {
-    if (isOpen) {
-      if (possibleDestinations.length > 0) {
-        setDestination(possibleDestinations[0]);
-      } else {
-        setDestination('');
-      }
+    // Atur tujuan default saat dialog dibuka
+    if (isOpen && possibleDestinations.length > 0) {
+      setDestination(possibleDestinations[0]);
+    } else if (isOpen) {
+      setDestination('');
     }
   }, [isOpen, possibleDestinations]);
 
@@ -54,25 +52,25 @@ const MoveItemsDialog: React.FC<MoveItemsDialogProps> = ({ isOpen, onClose, onCo
     >
       <div 
         className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md m-4 transform transition-all"
-        onClick={e => e.stopPropagation()} // Prevent closing when clicking inside
+        onClick={e => e.stopPropagation()} // Mencegah dialog tertutup saat diklik di dalam
       >
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Move All Items from Bag</h2>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Pindahkan Semua Barang dari Tas</h2>
         
         {possibleDestinations.length > 0 ? (
             <>
                 <p className="text-slate-600 dark:text-slate-300 mb-6">
-                  You are about to move <span className="font-bold text-slate-800 dark:text-slate-100">{itemCount}</span> {itemCount === 1 ? 'item' : 'items'} from your Bag.
-                  Please select the new location.
+                  Anda akan memindahkan <span className="font-bold text-slate-800 dark:text-slate-100">{itemCount}</span> {itemCount === 1 ? 'barang' : 'barang-barang'} dari Tas Anda.
+                  Silakan pilih lokasi baru.
                 </p>
 
                 <div className="space-y-2">
                     <label htmlFor="location-select" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                        Move to:
+                        Pindahkan ke:
                     </label>
                     <select
                         id="location-select"
                         value={destination}
-                        onChange={(e) => setDestination(e.target.value as Location)}
+                        onChange={(e) => setDestination(e.target.value)}
                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-200"
                     >
                         {possibleDestinations.map(loc => (
@@ -83,7 +81,7 @@ const MoveItemsDialog: React.FC<MoveItemsDialogProps> = ({ isOpen, onClose, onCo
             </>
         ) : (
             <p className="text-slate-600 dark:text-slate-300">
-                There are no available locations to move items to.
+                Tidak ada lokasi tujuan yang tersedia.
             </p>
         )}
 
@@ -92,14 +90,14 @@ const MoveItemsDialog: React.FC<MoveItemsDialogProps> = ({ isOpen, onClose, onCo
                 onClick={onClose}
                 className="px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-600 dark:text-slate-200 dark:hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-slate-500"
             >
-                Cancel
+                Batal
             </button>
             <button
                 onClick={handleConfirm}
                 disabled={!destination || itemCount === 0}
                 className="px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 bg-rose-600 text-white shadow-md hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-rose-500 disabled:bg-slate-400 disabled:text-slate-200 disabled:cursor-not-allowed dark:disabled:bg-slate-600 dark:disabled:text-slate-400"
             >
-                Confirm Move
+                Konfirmasi Pindah
             </button>
         </div>
       </div>

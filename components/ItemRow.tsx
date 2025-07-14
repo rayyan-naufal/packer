@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Item } from '../types';
+// Perhatikan: 'LOCATIONS' sudah dihapus dari baris import di bawah ini
 import { CATEGORY_COLORS, LOCATION_COLORS } from '../constants';
 
 interface DataItem {
@@ -10,9 +11,9 @@ interface DataItem {
 interface ItemRowProps {
   item: Item;
   index: number;
-  onUpdateItem: (id: number, updatedValues: Partial<Item>) => void;
+  onUpdateItem: (id: number, updatedValues: { location?: string; category?: string }) => void;
   categories: DataItem[];
-  locations: DataItem[]; // Prop baru ditambahkan di sini
+  locations: DataItem[];
 }
 
 type EditableField = 'category' | 'location' | null;
