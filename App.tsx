@@ -39,9 +39,6 @@ const App: React.FC = () => {
   }, [fetchItems]);
 
   const handleAddItem = async (itemData: { name: string; category_id: number; location: Location; note: string }) => {
-    // === BARIS DEBUGGING DITAMBAHKAN DI SINI ===
-    console.log("Mencoba mengirim data ke backend:", itemData);
-
     try {
       const response = await fetch('http://localhost:3001/api/items', {
         method: 'POST',
@@ -49,13 +46,9 @@ const App: React.FC = () => {
         body: JSON.stringify(itemData),
       });
       if (!response.ok) {
-        // Log respons error dari backend jika ada
-        const errorBody = await response.text();
-        console.error("Backend merespons dengan error:", response.status, errorBody);
         throw new Error('Gagal menambahkan barang');
       }
-      const newItem = await response.json();
-      setItems(currentItems => [...currentItems, newItem]);
+      await fetchItems();
       setShowAddForm(false);
     } catch (err) {
       console.error(err);
@@ -64,20 +57,11 @@ const App: React.FC = () => {
   };
 
   const handleUpdateItem = (id: number, updatedValues: Partial<Item>) => {
-    setItems(currentItems =>
-      currentItems.map(item =>
-        item.id === id ? { ...item, ...updatedValues } : item
-      )
-    );
+    // TODO: Implementasi update ke backend
   };
 
   const handleMoveAllFromBag = (destination: Location) => {
-    setItems(currentItems =>
-      currentItems.map(item =>
-        item.location === Location.Bag ? { ...item, location: destination } : item
-      )
-    );
-    setIsMoveModalOpen(false);
+    // TODO: Implementasi update ke backend
   };
 
   const filteredItems = useMemo(() => {
@@ -105,7 +89,7 @@ const App: React.FC = () => {
             </h1>
           </div>
           <p className="text-slate-500 dark:text-slate-400">
-            Track your essentials between dorm and home. Click on a category or location in the table to change it.
+            Lacak barang-barang penting Anda antara asrama dan rumah. Klik pada kategori atau lokasi di tabel untuk mengubahnya.
           </p>
         </header>
 
@@ -150,7 +134,7 @@ const App: React.FC = () => {
         </main>
         
         <footer className="text-center mt-8 text-sm text-slate-500 dark:text-slate-400">
-            <p>Built for students, by a student (of React).</p>
+            <p>Dibuat untuk mahasiswa, oleh seorang mahasiswa (React).</p>
         </footer>
       </div>
       
