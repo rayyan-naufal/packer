@@ -11,7 +11,7 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root', // Ganti dengan username MySQL Anda jika berbeda
   password: '',   // Ganti dengan password MySQL Anda
-  database: 'packer' // Pastikan ini nama database Anda
+  database: 'packer'
 }).promise();
 
 // === API ENDPOINTS UNTUK KATEGORI ===
@@ -75,7 +75,8 @@ app.delete('/api/categories/:id', async (req, res) => {
 const PORT = 3001;
 app.listen(PORT, async () => {
   try {
-    await db.getConnection(); // Coba konek untuk memastikan konfigurasi benar
+    // INI BAGIAN YANG DIPERBAIKI: Gunakan db.ping() untuk tes koneksi
+    await db.ping();
     console.log('✅ Berhasil terhubung ke database.');
     console.log(`🚀 Backend server berjalan di http://localhost:${PORT}`);
   } catch (err) {
