@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Item, Location } from './types';
 import { LogoIcon, LOCATIONS } from './constants';
 import FilterControls from './components/FilterControls';
-import ItemTable from './components/ItemTable';
+// Perhatikan perubahan di sini: ItemTable sekarang di dalam {}
+import { ItemTable } from './components/ItemTable';
 import MoveItemsDialog from './components/MoveItemsDialog';
 
 interface CategoryFromDB {
