@@ -4,7 +4,7 @@ import { LogoIcon, LOCATIONS } from './constants';
 import FilterControls from './components/FilterControls';
 import { ItemTable } from './components/ItemTable';
 import MoveItemsDialog from './components/MoveItemsDialog';
-import { AddItemForm } from './components/AddItemForm'; // Import form baru
+import { AddItemForm } from './components/AddItemForm';
 
 interface CategoryFromDB {
   id: number;
@@ -17,9 +17,8 @@ const App: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<string | 'All'>('All');
   const [locationFilter, setLocationFilter] = useState<Location | 'All'>('All');
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false); // State untuk menampilkan form
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  // Gunakan useCallback agar fungsi ini tidak dibuat ulang setiap render
   const fetchItems = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:3001/api/items');
@@ -31,17 +30,18 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Ambil kategori
     fetch('http://localhost:3001/api/categories')
       .then(res => res.json())
       .then(data => setCategories(data))
       .catch(err => console.error("Gagal mengambil kategori:", err));
     
-    // Ambil item
     fetchItems();
   }, [fetchItems]);
 
   const handleAddItem = async (itemData: { name: string; category_id: number; location: Location; note: string }) => {
+    // === BARIS DEBUGGING DITAMBAHKAN DI SINI ===
+    console.log("Mencoba mengirim data ke backend:", itemData);
+
     try {
       const response = await fetch('http://localhost:3001/api/items', {
         method: 'POST',
@@ -49,12 +49,14 @@ const App: React.FC = () => {
         body: JSON.stringify(itemData),
       });
       if (!response.ok) {
+        // Log respons error dari backend jika ada
+        const errorBody = await response.text();
+        console.error("Backend merespons dengan error:", response.status, errorBody);
         throw new Error('Gagal menambahkan barang');
       }
-      // Tambahkan item baru ke state tanpa perlu fetch ulang semua data
       const newItem = await response.json();
       setItems(currentItems => [...currentItems, newItem]);
-      setShowAddForm(false); // Sembunyikan form setelah berhasil
+      setShowAddForm(false);
     } catch (err) {
       console.error(err);
       alert('Terjadi kesalahan saat menambahkan barang.');
@@ -62,7 +64,6 @@ const App: React.FC = () => {
   };
 
   const handleUpdateItem = (id: number, updatedValues: Partial<Item>) => {
-    // TODO: Implementasi update ke backend
     setItems(currentItems =>
       currentItems.map(item =>
         item.id === id ? { ...item, ...updatedValues } : item
@@ -71,7 +72,6 @@ const App: React.FC = () => {
   };
 
   const handleMoveAllFromBag = (destination: Location) => {
-    // TODO: Implementasi update ke backend
     setItems(currentItems =>
       currentItems.map(item =>
         item.location === Location.Bag ? { ...item, location: destination } : item
@@ -96,11 +96,20 @@ const App: React.FC = () => {
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
-          {/* ... bagian header tidak berubah ... */}
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="bg-blue-600 text-white p-2 rounded-lg">
+                <LogoIcon />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+              Student Packer
+            </h1>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400">
+            Track your essentials between dorm and home. Click on a category or location in the table to change it.
+          </p>
         </header>
 
         <main>
-          {/* Tombol untuk menampilkan form tambah barang */}
           {!showAddForm && (
             <div className="mb-6 text-right">
               <button
@@ -112,7 +121,6 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Tampilkan form jika showAddForm adalah true */}
           {showAddForm && (
             <AddItemForm
               categories={categories}
