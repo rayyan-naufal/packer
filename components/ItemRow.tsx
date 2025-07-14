@@ -1,17 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Item, Location } from '../types';
-import { CATEGORY_COLORS, LOCATION_COLORS, LOCATIONS } from '../constants';
+import { Item } from '../types';
+import { CATEGORY_COLORS, LOCATION_COLORS } from '../constants';
+
+interface DataItem {
+  id: number;
+  name: string;
+}
 
 interface ItemRowProps {
   item: Item;
   index: number;
-  onUpdateItem: (id: number, updatedValues: { location?: Location; category?: string }) => void;
-  categories: { id: number; name: string }[];
+  onUpdateItem: (id: number, updatedValues: Partial<Item>) => void;
+  categories: DataItem[];
+  locations: DataItem[]; // Prop baru ditambahkan di sini
 }
 
 type EditableField = 'category' | 'location' | null;
 
-const ItemRow: React.FC<ItemRowProps> = ({ item, index, onUpdateItem, categories }) => {
+const ItemRow: React.FC<ItemRowProps> = ({ item, index, onUpdateItem, categories, locations }) => {
   const [editing, setEditing] = useState<EditableField>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
 
@@ -34,9 +40,10 @@ const ItemRow: React.FC<ItemRowProps> = ({ item, index, onUpdateItem, categories
 
   const renderEditableCell = (field: 'category' | 'location') => {
     const isEditingThisCell = editing === field;
-    const options = field === 'category' ? categories.map(c => c.name) : LOCATIONS;
+    // Gunakan data dinamis dari props
+    const options = field === 'category' ? categories.map(c => c.name) : locations.map(l => l.name);
     const value = item[field];
-    const colorClasses = field === 'category' ? (CATEGORY_COLORS[item.category] || 'bg-gray-200') : LOCATION_COLORS[item.location];
+    const colorClasses = field === 'category' ? (CATEGORY_COLORS[item.category] || 'bg-gray-200') : (LOCATION_COLORS[item.location] || 'bg-gray-200');
 
     return (
       <td className="px-4 py-3 text-sm" onClick={() => !editing && setEditing(field)}>

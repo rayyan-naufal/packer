@@ -1,20 +1,16 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Item } from './types';
+// Perhatikan path yang sudah diperbaiki di sini
+import { Item, Location } from './types'; 
 import { LogoIcon } from './constants';
 import FilterControls from './components/FilterControls';
 import { ItemTable } from './components/ItemTable';
 import MoveItemsDialog from './components/MoveItemsDialog';
 import { AddItemForm } from './components/AddItemForm';
-import { SettingsPage } from './components/SettingsPage'; // Import halaman baru
 
-// Tipe data umum untuk Kategori dan Lokasi
-interface DataItem {
+interface CategoryFromDB {
   id: number;
   name: string;
 }
-
-// Tipe untuk membedakan tampilan
-type View = 'main' | 'settings';
 
 // Definisikan tipe untuk konfigurasi sorting
 type SortConfig = {
@@ -23,20 +19,15 @@ type SortConfig = {
 };
 
 const App: React.FC = () => {
-  // State untuk data
   const [items, setItems] = useState<Item[]>([]);
-  const [categories, setCategories] = useState<DataItem[]>([]);
-  const [locations, setLocations] = useState<DataItem[]>([]);
-  
-  // State untuk UI
-  const [view, setView] = useState<View>('main');
+  const [categories, setCategories] = useState<CategoryFromDB[]>([]);
+  const [locations, setLocations] = useState<CategoryFromDB[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string | 'All'>('All');
   const [locationFilter, setLocationFilter] = useState<string | 'All'>('All');
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: '#', direction: 'ascending' });
 
-  // Fungsi untuk mengambil semua data dari server
   const fetchAllData = useCallback(async () => {
     try {
       const [itemsRes, catRes, locRes] = await Promise.all([
@@ -59,8 +50,6 @@ const App: React.FC = () => {
     fetchAllData();
   }, [fetchAllData]);
 
-  // --- HANDLER UNTUK SEMUA AKSI ---
-
   const handleApiAction = async (url: string, options: RequestInit) => {
     try {
         const response = await fetch(url, options);
@@ -68,7 +57,7 @@ const App: React.FC = () => {
             const errorData = await response.json();
             throw new Error(errorData.message);
         }
-        await fetchAllData(); // Ambil ulang semua data setelah aksi berhasil
+        await fetchAllData();
     } catch (err) {
         alert('Terjadi kesalahan: ' + (err as Error).message);
     }
@@ -133,8 +122,6 @@ const App: React.FC = () => {
     });
     setIsMoveModalOpen(false);
   };
-  
-  // --- LOGIKA FILTER & SORT ---
 
   const requestSort = (key: keyof Item | '#') => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -155,8 +142,12 @@ const App: React.FC = () => {
       processableItems = [...processableItems].sort((a, b) => {
         if (sortConfig.key !== '#') {
           const key = sortConfig.key as keyof Item;
-          if (a[key] < b[key]) return sortConfig.direction === 'ascending' ? -1 : 1;
-          if (a[key] > b[key]) return sortConfig.direction === 'ascending' ? 1 : -1;
+          if (a[key] < b[key]) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+          }
+          if (a[key] > b[key]) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+          }
         }
         return 0;
       });
@@ -165,14 +156,13 @@ const App: React.FC = () => {
     if (sortConfig?.key === '#' && sortConfig.direction === 'descending') {
         return processableItems.reverse();
     }
+
     return processableItems;
   }, [items, categoryFilter, locationFilter, sortConfig]);
 
   const itemsInBagCount = useMemo(() => {
     return items.filter(item => item && item.location === 'Bag').length;
   }, [items]);
-
-  // --- IKON & RENDER ---
 
   const SettingsIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>

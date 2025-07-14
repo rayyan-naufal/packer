@@ -1,37 +1,40 @@
 import React, { useState, useEffect } from 'react';
-// Perhatikan path yang sudah diperbaiki di sini
-import { Location } from '../types';
-// Perhatikan path yang sudah diperbaiki di sini juga
-import { LOCATIONS } from '../constants';
+import { Item } from '../types'; // Kita tidak butuh Location dari sini lagi
+
+interface DataItem {
+  id: number;
+  name: string;
+}
 
 interface AddItemFormProps {
-  categories: { id: number; name: string }[];
-  onAddItem: (itemData: { name: string; category_id: number; location: Location; note: string }) => void;
+  categories: DataItem[];
+  locations: DataItem[]; // Prop baru ditambahkan di sini
+  onAddItem: (itemData: { name: string; category_id: number; location_id: number; note: string }) => void;
   onCancel: () => void;
 }
 
-export const AddItemForm: React.FC<AddItemFormProps> = ({ categories, onAddItem, onCancel }) => {
+export const AddItemForm: React.FC<AddItemFormProps> = ({ categories, locations, onAddItem, onCancel }) => {
   const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState<number | ''>(''); 
-  const [location, setLocation] = useState<Location>(Location.Bag);
+  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [locationId, setLocationId] = useState<number | ''>('');
   const [note, setNote] = useState('');
 
   useEffect(() => {
     if (categoryId === '' && categories.length > 0) {
       setCategoryId(categories[0].id);
     }
-  }, [categories, categoryId]);
+    if (locationId === '' && locations.length > 0) {
+      setLocationId(locations[0].id);
+    }
+  }, [categories, locations, categoryId, locationId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log("Mempersiapkan data untuk dikirim:", { name, categoryId, location, note });
-
-    if (!name || categoryId === '') {
-      alert('Nama barang dan kategori tidak boleh kosong!');
+    if (!name || categoryId === '' || locationId === '') {
+      alert('Nama barang, kategori, dan lokasi tidak boleh kosong!');
       return;
     }
-    onAddItem({ name, category_id: categoryId, location, note });
+    onAddItem({ name, category_id: categoryId, location_id: locationId, note });
   };
 
   return (
@@ -65,7 +68,6 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({ categories, onAddItem,
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600"
             disabled={categories.length === 0}
           >
-            {categories.length === 0 && <option>Loading categories...</option>}
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
@@ -81,13 +83,14 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({ categories, onAddItem,
           </label>
           <select
             id="itemLocation"
-            value={location}
-            onChange={(e) => setLocation(e.target.value as Location)}
+            value={locationId}
+            onChange={(e) => setLocationId(Number(e.target.value))}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:border-slate-600"
+            disabled={locations.length === 0}
           >
-            {LOCATIONS.map((loc) => (
-              <option key={loc} value={loc}>
-                {loc}
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.name}
               </option>
             ))}
           </select>

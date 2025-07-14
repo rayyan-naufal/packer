@@ -1,33 +1,22 @@
 import React from 'react';
-import { Location } from '../types';
-import { LOCATIONS } from '../constants';
 
-// Definisikan tipe untuk kategori yang diterima dari database
-interface CategoryFromDB {
-  id: number;
-  name: string;
-}
-
-// Definisikan props untuk FilterControls
+// Definisikan tipe untuk data yang diterima
 interface FilterControlsProps {
   categoryFilter: string | 'All';
   setCategoryFilter: (filter: string | 'All') => void;
-  locationFilter: Location | 'All';
-  setLocationFilter: (filter: Location | 'All') => void;
+  locationFilter: string | 'All';
+  setLocationFilter: (filter: string | 'All') => void;
   onMoveAllFromBagClick: () => void;
   itemsInBagCount: number;
-  categories: CategoryFromDB[];
+  categories: string[]; // Terima array of strings
+  locations: string[];  // Terima array of strings
 }
 
-// Definisikan props untuk FilterButton
-interface FilterButtonProps {
+const FilterButton: React.FC<{
     label: string;
     isActive: boolean;
     onClick: () => void;
-}
-
-// Komponen Tombol Filter (sudah didefinisikan dengan benar di sini)
-const FilterButton: React.FC<FilterButtonProps> = ({ label, isActive, onClick }) => {
+}> = ({ label, isActive, onClick }) => {
     const baseClasses = 'px-3 py-1.5 text-sm font-semibold rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-blue-500';
     const activeClasses = 'bg-blue-600 text-white shadow-md';
     const inactiveClasses = 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600';
@@ -47,7 +36,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   setLocationFilter,
   onMoveAllFromBagClick,
   itemsInBagCount,
-  categories
+  categories,
+  locations // Ambil dari props
 }) => {
   return (
     <div className="space-y-6 md:space-y-0 md:flex md:justify-between md:items-start md:gap-8">
@@ -57,7 +47,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
           <div className="flex flex-wrap gap-2">
             <FilterButton label="All" isActive={categoryFilter === 'All'} onClick={() => setCategoryFilter('All')} />
             {categories.map(cat => (
-              <FilterButton key={cat.id} label={cat.name} isActive={categoryFilter === cat.name} onClick={() => setCategoryFilter(cat.name)} />
+              <FilterButton key={cat} label={cat} isActive={categoryFilter === cat} onClick={() => setCategoryFilter(cat)} />
             ))}
           </div>
         </div>
@@ -65,7 +55,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
           <h3 className="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-200">Location</h3>
           <div className="flex flex-wrap gap-2">
             <FilterButton label="All" isActive={locationFilter === 'All'} onClick={() => setLocationFilter('All')} />
-            {LOCATIONS.map(loc => (
+            {/* Gunakan data 'locations' dari props */}
+            {locations.map(loc => (
               <FilterButton key={loc} label={loc} isActive={locationFilter === loc} onClick={() => setLocationFilter(loc)} />
             ))}
           </div>
