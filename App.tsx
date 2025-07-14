@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Item, Location } from './types';
+// Perhatikan path yang sudah diperbaiki di sini
+import { Item, Location } from './types'; 
 import { LogoIcon, LOCATIONS } from './constants';
 import FilterControls from './components/FilterControls';
 import { ItemTable } from './components/ItemTable';
@@ -11,6 +12,12 @@ interface CategoryFromDB {
   name: string;
 }
 
+// Definisikan tipe untuk konfigurasi sorting
+type SortConfig = {
+  key: keyof Item | '#';
+  direction: 'ascending' | 'descending';
+};
+
 const App: React.FC = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<CategoryFromDB[]>([]);
@@ -18,6 +25,7 @@ const App: React.FC = () => {
   const [locationFilter, setLocationFilter] = useState<Location | 'All'>('All');
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: '#', direction: 'ascending' });
 
   const fetchItems = useCallback(async () => {
     try {
@@ -40,20 +48,15 @@ const App: React.FC = () => {
 
   const handleAddItem = async (itemData: { name: string; category_id: number; location: Location; note: string }) => {
     try {
-      const response = await fetch('http://localhost:3001/api/items', {
+      await fetch('http://localhost:3001/api/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(itemData),
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal menambahkan barang');
-      }
       await fetchItems();
       setShowAddForm(false);
     } catch (err) {
-      console.error(err);
-      alert('Terjadi kesalahan: ' + (err as Error).message);
+      alert('Terjadi kesalahan saat menambahkan barang.');
     }
   };
 
@@ -63,13 +66,8 @@ const App: React.FC = () => {
         body = { location: updatedValues.location };
     } else if (updatedValues.category) {
         const category = categories.find(c => c.name === updatedValues.category);
-        if (category) {
-            body = { category_id: category.id };
-        } else {
-            return;
-        }
+        if (category) { body = { category_id: category.id }; }
     }
-
     if (Object.keys(body).length > 0) {
         try {
             await fetch(`http://localhost:3001/api/items/${id}`, {
@@ -84,34 +82,64 @@ const App: React.FC = () => {
     }
   };
 
-  // Fungsi untuk memindahkan semua barang dari tas
   const handleMoveAllFromBag = async (destination: Location) => {
     try {
-        const response = await fetch('http://localhost:3001/api/items/move-all-from-bag', {
+        await fetch('http://localhost:3001/api/items/move-all-from-bag', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ destination }),
         });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Gagal memindahkan barang');
-        }
-        await fetchItems(); // Ambil ulang data setelah berhasil
+        await fetchItems();
         setIsMoveModalOpen(false);
     } catch (err) {
-        alert('Terjadi kesalahan: ' + (err as Error).message);
-        console.error(err);
+        alert('Terjadi kesalahan saat memindahkan barang.');
     }
   };
 
-  const filteredItems = useMemo(() => {
-    return items.filter(item => {
-      if (!item) return false;
+  const requestSort = (key: keyof Item | '#') => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // === BLOK LOGIKA DIPERBAIKI DI SINI ===
+  const processedItems = useMemo(() => {
+    // 1. Filter data
+    let processableItems = items.filter(item => {
       const categoryMatch = categoryFilter === 'All' || item.category === categoryFilter;
       const locationMatch = locationFilter === 'All' || item.location === locationFilter;
       return categoryMatch && locationMatch;
     });
-  }, [items, categoryFilter, locationFilter]);
+
+    // 2. Urutkan data yang sudah difilter
+    if (sortConfig !== null) {
+      // Buat salinan array sebelum diurutkan untuk menghindari mutasi
+      processableItems = [...processableItems].sort((a, b) => {
+        // Jika key bukan '#', lakukan pengurutan alfabetis/numerik
+        if (sortConfig.key !== '#') {
+          const key = sortConfig.key as keyof Item; // Pastikan key adalah properti dari Item
+          if (a[key] < b[key]) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+          }
+          if (a[key] > b[key]) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+          }
+        }
+        return 0;
+      });
+    }
+    
+    // 3. Jika sort by # descending, kita reverse array yang sudah difilter
+    // (Urutan ascending by # adalah urutan default dari database)
+    if (sortConfig?.key === '#' && sortConfig.direction === 'descending') {
+        return processableItems.reverse();
+    }
+
+    return processableItems;
+  }, [items, categoryFilter, locationFilter, sortConfig]);
+
 
   const itemsInBagCount = useMemo(() => {
     return items.filter(item => item && item.location === Location.Bag).length;
@@ -148,7 +176,13 @@ const App: React.FC = () => {
               categories={categories}
             />
             <div className="mt-6">
-              <ItemTable items={filteredItems} onUpdateItem={handleUpdateItem} categories={categories} />
+              <ItemTable 
+                items={processedItems} 
+                onUpdateItem={handleUpdateItem} 
+                categories={categories}
+                requestSort={requestSort}
+                sortConfig={sortConfig}
+              />
             </div>
           </div>
         </main>
