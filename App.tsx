@@ -57,7 +57,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Fungsi untuk mengedit item
   const handleUpdateItem = async (id: number, updatedValues: { location?: Location; category?: string }) => {
     let body = {};
     if (updatedValues.location) {
@@ -67,7 +66,7 @@ const App: React.FC = () => {
         if (category) {
             body = { category_id: category.id };
         } else {
-            return; // Hentikan jika kategori tidak ditemukan
+            return;
         }
     }
 
@@ -78,15 +77,31 @@ const App: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
-            await fetchItems(); // Ambil ulang data setelah berhasil
+            await fetchItems();
         } catch (err) {
             alert('Terjadi kesalahan saat mengedit barang.');
         }
     }
   };
 
-  const handleMoveAllFromBag = (destination: Location) => {
-    // Logika untuk fitur move all akan ditambahkan di sini nanti
+  // Fungsi untuk memindahkan semua barang dari tas
+  const handleMoveAllFromBag = async (destination: Location) => {
+    try {
+        const response = await fetch('http://localhost:3001/api/items/move-all-from-bag', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ destination }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Gagal memindahkan barang');
+        }
+        await fetchItems(); // Ambil ulang data setelah berhasil
+        setIsMoveModalOpen(false);
+    } catch (err) {
+        alert('Terjadi kesalahan: ' + (err as Error).message);
+        console.error(err);
+    }
   };
 
   const filteredItems = useMemo(() => {
@@ -138,6 +153,14 @@ const App: React.FC = () => {
           </div>
         </main>
       </div>
+      
+      <MoveItemsDialog
+        isOpen={isMoveModalOpen}
+        onClose={() => setIsMoveModalOpen(false)}
+        onConfirm={handleMoveAllFromBag}
+        itemCount={itemsInBagCount}
+        locations={LOCATIONS}
+      />
     </div>
   );
 };

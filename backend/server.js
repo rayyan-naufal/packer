@@ -14,7 +14,7 @@ const db = mysql.createConnection({
   database: 'packer'
 }).promise();
 
-// === API KATEGORI (Tidak berubah) ===
+// === API KATEGORI ===
 app.get('/api/categories', async (req, res) => {
   try {
     const [results] = await db.query('SELECT * FROM categories ORDER BY name');
@@ -24,7 +24,7 @@ app.get('/api/categories', async (req, res) => {
   }
 });
 
-// === API ITEM (Diperbarui dengan Edit & Pindah) ===
+// === API ITEM ===
 
 // GET: Mengambil semua item
 app.get('/api/items', async (req, res) => {
@@ -59,7 +59,26 @@ app.post('/api/items', async (req, res) => {
     }
 });
 
-// PUT: Mengedit satu item (lokasi atau kategori)
+
+// === URUTAN DIPERBAIKI DI SINI ===
+// Rute yang lebih spesifik ('/move-all-from-bag') harus didefinisikan SEBELUM rute yang lebih umum ('/:id').
+
+// PUT: Memindahkan semua item dari 'Bag'
+app.put('/api/items/move-all-from-bag', async (req, res) => {
+    try {
+        const { destination } = req.body;
+        if (!destination || !['Bag', 'House', 'Dorm'].includes(destination)) {
+            return res.status(400).json({ message: 'Destination is required and must be valid.' });
+        }
+        const [result] = await db.query("UPDATE items SET location = ? WHERE location = 'Bag'", [destination]);
+        res.json({ message: `${result.affectedRows} items moved to ${destination}.` });
+    } catch (err) {
+        console.error(`❌ [PUT /api/items/move-all-from-bag] Error:`, err);
+        res.status(500).json({ message: 'Error moving items' });
+    }
+});
+
+// PUT: Mengedit satu item
 app.put('/api/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -74,10 +93,10 @@ app.put('/api/items/:id', async (req, res) => {
         }
         res.json({ message: `Item ${id} updated successfully.` });
     } catch (err) {
-        console.error(`❌ [PUT /api/items/${req.params.id}] Error:`, err);
         res.status(500).json({ message: 'Error updating item' });
     }
 });
+
 
 // Jalankan server
 const PORT = 3001;
