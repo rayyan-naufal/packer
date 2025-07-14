@@ -1,146 +1,84 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Item, Location } from './types'; // Category tidak lagi diimpor dari sini
-import { LogoIcon, LOCATIONS } from './constants';
-import FilterControls from './components/FilterControls';
-import ItemTable from './components/ItemTable';
-import MoveItemsDialog from './components/MoveItemsDialog';
+const express = require('express');
+const mysql = require('mysql2');
+const cors = require('cors');
 
-// Definisikan tipe baru untuk data kategori yang datang dari database
-interface CategoryFromDB {
-  id: number;
-  name: string;
-}
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-const App: React.FC = () => {
-  // State untuk item dan kategori, awalnya array kosong
-  const [items, setItems] = useState<Item[]>([]);
-  const [categories, setCategories] = useState<CategoryFromDB[]>([]);
+// Konfigurasi koneksi ke database 'packer' Anda
+const db = mysql.createConnection({
+  host: 'localhost',
+  user: 'root', // Ganti dengan username MySQL Anda jika berbeda
+  password: '',   // Ganti dengan password MySQL Anda
+  database: 'packer' // Pastikan ini nama database Anda
+}).promise();
 
-  // State untuk filter
-  const [categoryFilter, setCategoryFilter] = useState<string | 'All'>('All');
-  const [locationFilter, setLocationFilter] = useState<Location | 'All'>('All');
-  
-  // State untuk dialog/modal
-  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+// === API ENDPOINTS UNTUK KATEGORI ===
 
-  // Hook untuk mengambil data dari backend saat komponen pertama kali dimuat
-  useEffect(() => {
-    // 1. Ambil Kategori dari backend
-    fetch('http://localhost:3001/api/categories')
-      .then(res => res.json())
-      .then(data => {
-        console.log("Categories fetched:", data);
-        setCategories(data);
-      })
-      .catch(err => console.error("Gagal mengambil kategori:", err));
+// GET: Mengambil semua kategori
+app.get('/api/categories', async (req, res) => {
+  try {
+    const [results] = await db.query('SELECT * FROM categories ORDER BY name');
+    res.json(results);
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+    res.status(500).json({ message: 'Error fetching categories' });
+  }
+});
 
-    // 2. Ambil Items dari backend
-    // CATATAN: Anda perlu membuat endpoint `/api/items` di backend Anda
-    // Untuk sekarang, ini akan mengembalikan array kosong.
-    // fetch('http://localhost:3001/api/items')
-    //   .then(res => res.json())
-    //   .then(data => {
-    //     console.log("Items fetched:", data);
-    //     setItems(data);
-    //   })
-    //   .catch(err => console.error("Gagal mengambil item:", err));
+// POST: Menambah kategori baru
+app.post('/api/categories', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ message: 'Category name is required' });
+    }
+    const [result] = await db.query('INSERT INTO categories (name) VALUES (?)', [name]);
+    res.status(201).json({ id: result.insertId, name });
+  } catch (err) {
+    console.error("Error adding category:", err);
+    res.status(500).json({ message: 'Error adding category' });
+  }
+});
 
-  }, []); // Array dependensi kosong berarti hook ini hanya berjalan sekali
+// PUT: Mengedit kategori
+app.put('/api/categories/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name } = req.body;
+        if (!name) {
+            return res.status(400).json({ message: 'Category name is required' });
+        }
+        await db.query('UPDATE categories SET name = ? WHERE id = ?', [name, id]);
+        res.json({ id: Number(id), name });
+    } catch (err) {
+        console.error("Error updating category:", err);
+        res.status(500).json({ message: 'Error updating category' });
+    }
+});
 
-  // Fungsi ini perlu diupdate untuk berkomunikasi dengan backend
-  const handleUpdateItem = (id: number, updatedValues: Partial<Item>) => {
-    console.log(`Memperbarui item ${id} dengan`, updatedValues);
-    // TODO: Kirim request PUT/PATCH ke backend di sini
-    // Contoh: fetch(`/api/items/${id}`, { method: 'PUT', ... })
+// DELETE: Menghapus kategori
+app.delete('/api/categories/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.query('DELETE FROM categories WHERE id = ?', [id]);
+        res.status(204).send(); // 204 No Content
+    } catch (err) {
+        console.error("Error deleting category:", err);
+        res.status(500).json({ message: 'Error deleting category' });
+    }
+});
 
-    // Untuk sementara, update state di frontend saja
-    setItems(currentItems =>
-      currentItems.map(item =>
-        item.id === id ? { ...item, ...updatedValues } : item
-      )
-    );
-  };
 
-  // Fungsi ini juga perlu diupdate untuk berkomunikasi dengan backend
-  const handleMoveAllFromBag = (destination: Location) => {
-    console.log(`Memindahkan semua item dari tas ke ${destination}`);
-    // TODO: Kirim request ke backend untuk memindahkan banyak item
-    
-    setItems(currentItems =>
-      currentItems.map(item =>
-        item.location === Location.Bag ? { ...item, location: destination } : item
-      )
-    );
-    setIsMoveModalOpen(false);
-  };
-
-  // Memoized filtered items
-  const filteredItems = useMemo(() => {
-    return items.filter(item => {
-      const categoryMatch = categoryFilter === 'All' || item.category === categoryFilter;
-      const locationMatch = locationFilter === 'All' || item.location === locationFilter;
-      return categoryMatch && locationMatch;
-    });
-  }, [items, categoryFilter, locationFilter]);
-
-  // Memoized count of items in bag
-  const itemsInBagCount = useMemo(() => {
-    return items.filter(item => item.location === Location.Bag).length;
-  }, [items]);
-
-  return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="bg-blue-600 text-white p-2 rounded-lg">
-                <LogoIcon />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              Student Packer
-            </h1>
-          </div>
-          <p className="text-slate-500 dark:text-slate-400">
-            Track your essentials between dorm and home. Click on a category or location in the table to change it.
-          </p>
-        </header>
-
-        <main>
-          <div className="bg-white dark:bg-slate-800/50 rounded-xl shadow-lg p-6">
-            <FilterControls
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              locationFilter={locationFilter}
-              setLocationFilter={setLocationFilter}
-              onMoveAllFromBagClick={() => setIsMoveModalOpen(true)}
-              itemsInBagCount={itemsInBagCount}
-              categories={categories}
-            />
-            <div className="mt-6">
-              <ItemTable
-                items={filteredItems}
-                onUpdateItem={handleUpdateItem}
-                categories={categories}
-              />
-            </div>
-          </div>
-        </main>
-        
-        <footer className="text-center mt-8 text-sm text-slate-500 dark:text-slate-400">
-            <p>Built for students, by a student (of React).</p>
-        </footer>
-      </div>
-
-      {/* Ini adalah bagian yang diperbaiki. Semua props ditulis lengkap. */}
-      <MoveItemsDialog
-        isOpen={isMoveModalOpen}
-        onClose={() => setIsMoveModalOpen(false)}
-        onConfirm={handleMoveAllFromBag}
-        itemCount={itemsInBagCount}
-        locations={LOCATIONS}
-      />
-    </div>
-  );
-};
-
-export default App;
+// Jalankan server
+const PORT = 3001;
+app.listen(PORT, async () => {
+  try {
+    await db.getConnection(); // Coba konek untuk memastikan konfigurasi benar
+    console.log('✅ Berhasil terhubung ke database.');
+    console.log(`🚀 Backend server berjalan di http://localhost:${PORT}`);
+  } catch (err) {
+    console.error('❌ Gagal terhubung ke database:', err.message);
+  }
+});
