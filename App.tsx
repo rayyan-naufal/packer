@@ -1,34 +1,40 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Item, Location } from './types';
-import { LogoIcon, LOCATIONS } from './constants';
-import FilterControls from './components/FilterControls';
+import { LogoIcon } from './constants';
 import { ItemTable } from './components/ItemTable';
-import MoveItemsDialog from './components/MoveItemsDialog';
-import { AddItemForm } from './components/AddItemForm';
+import FilterControls from './components/FilterControls'; // Import FilterControls
 
+// Tipe data untuk kategori dari DB
 interface CategoryFromDB {
   id: number;
   name: string;
 }
 
 const App: React.FC = () => {
+  // State untuk data mentah dari server
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<CategoryFromDB[]>([]);
+  
+  // State untuk filter, kita tambahkan kembali
   const [categoryFilter, setCategoryFilter] = useState<string | 'All'>('All');
   const [locationFilter, setLocationFilter] = useState<Location | 'All'>('All');
-  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
 
+  // Fungsi untuk mengambil data item
   const fetchItems = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:3001/api/items');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
+      console.log("Data item berhasil diambil:", data);
       setItems(data);
     } catch (err) {
-      console.error("Gagal mengambil item:", err);
+      console.error("Gagal total mengambil item:", err);
     }
   }, []);
 
+  // useEffect untuk mengambil data saat aplikasi pertama kali dimuat
   useEffect(() => {
     fetch('http://localhost:3001/api/categories')
       .then(res => res.json())
@@ -38,45 +44,15 @@ const App: React.FC = () => {
     fetchItems();
   }, [fetchItems]);
 
-  const handleAddItem = async (itemData: { name: string; category_id: number; location: Location; note: string }) => {
-    try {
-      const response = await fetch('http://localhost:3001/api/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(itemData),
-      });
-      if (!response.ok) {
-        throw new Error('Gagal menambahkan barang');
-      }
-      await fetchItems();
-      setShowAddForm(false);
-    } catch (err) {
-      console.error(err);
-      alert('Terjadi kesalahan saat menambahkan barang.');
-    }
-  };
-
-  const handleUpdateItem = (id: number, updatedValues: Partial<Item>) => {
-    // TODO: Implementasi update ke backend
-  };
-
-  const handleMoveAllFromBag = (destination: Location) => {
-    // TODO: Implementasi update ke backend
-  };
-
+  // Logika filter kita kembalikan menggunakan useMemo
   const filteredItems = useMemo(() => {
-    // Mengembalikan logika filter ke dalam useMemo
     return items.filter(item => {
-      if (!item) return false; // Pengaman jika ada data null/undefined
+      if (!item) return false; // Pengaman
       const categoryMatch = categoryFilter === 'All' || item.category === categoryFilter;
       const locationMatch = locationFilter === 'All' || item.location === locationFilter;
       return categoryMatch && locationMatch;
     });
   }, [items, categoryFilter, locationFilter]);
-
-  const itemsInBagCount = useMemo(() => {
-    return items.filter(item => item && item.location === Location.Bag).length;
-  }, [items]);
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
@@ -91,55 +67,30 @@ const App: React.FC = () => {
             </h1>
           </div>
           <p className="text-slate-500 dark:text-slate-400">
-            Lacak barang-barang penting Anda antara asrama dan rumah. Klik pada kategori atau lokasi di tabel untuk mengubahnya.
+            Daftar Barang dari Database
           </p>
         </header>
 
         <main>
-          {!showAddForm && (
-            <div className="mb-6 text-right">
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="px-5 py-2.5 text-sm font-semibold rounded-md transition-colors duration-200 bg-blue-600 text-white shadow-md hover:bg-blue-700"
-              >
-                + Tambah Barang Baru
-              </button>
-            </div>
-          )}
-
-          {showAddForm && (
-            <AddItemForm
-              categories={categories}
-              onAddItem={handleAddItem}
-              onCancel={() => setShowAddForm(false)}
-            />
-          )}
-
-          <div className="bg-white dark:bg-slate-800/50 rounded-xl shadow-lg p-6">
+          <div className="bg-white dark:bg-slate-800/50 rounded-xl shadow-lg p-6 mt-6">
+            
+            {/* Komponen FilterControls kita tambahkan kembali */}
             <FilterControls
               categoryFilter={categoryFilter}
               setCategoryFilter={setCategoryFilter}
               locationFilter={locationFilter}
               setLocationFilter={setLocationFilter}
-              onMoveAllFromBagClick={() => setIsMoveModalOpen(true)}
-              itemsInBagCount={itemsInBagCount}
+              // Untuk sementara, kita berikan nilai dummy untuk props yang belum terpakai
+              onMoveAllFromBagClick={() => {}}
+              itemsInBagCount={0}
               categories={categories}
             />
+
             <div className="mt-6">
-              {/* === BLOK DEBUGGING BARU === */}
-              {/* Blok ini akan muncul HANYA jika ada masalah rendering */}
-              {filteredItems.length === 0 && items.length > 0 && (
-                <div className="text-center py-10 px-4 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 rounded-lg">
-                  <p className="font-bold">Pesan Debugging:</p>
-                  <p>Ada <span className="font-bold">{items.length}</span> barang di dalam data, tetapi tidak ada yang ditampilkan.</p>
-                  <p>Ini biasanya terjadi karena masalah rendering atau format data yang tidak cocok.</p>
-                  <p className="mt-2 text-xs">Filter saat ini: Kategori '{categoryFilter}', Lokasi '{locationFilter}'</p>
-                </div>
-              )}
-              
+              {/* Sekarang kita berikan 'filteredItems' ke tabel */}
               <ItemTable
                 items={filteredItems}
-                onUpdateItem={handleUpdateItem}
+                onUpdateItem={() => {}}
                 categories={categories}
               />
             </div>
@@ -150,14 +101,6 @@ const App: React.FC = () => {
             <p>Dibuat untuk mahasiswa, oleh seorang mahasiswa (React).</p>
         </footer>
       </div>
-      
-      <MoveItemsDialog
-        isOpen={isMoveModalOpen}
-        onClose={() => setIsMoveModalOpen(false)}
-        onConfirm={handleMoveAllFromBag}
-        itemCount={itemsInBagCount}
-        locations={LOCATIONS}
-      />
     </div>
   );
 };
