@@ -8,7 +8,6 @@ type SortConfig = {
   direction: 'ascending' | 'descending';
 };
 
-// Tipe data umum untuk Kategori dan Lokasi
 interface DataItem {
   id: number;
   name: string;
@@ -17,8 +16,10 @@ interface DataItem {
 interface ItemTableProps {
   items: Item[];
   onUpdateItem: (id: number, updatedValues: Partial<Item>) => void;
+  onEditItem: (item: Item) => void; // Prop baru
+  onDeleteItem: (id: number) => void; // Prop baru
   categories: DataItem[];
-  locations: DataItem[]; // Prop yang hilang sudah ditambahkan di sini
+  locations: DataItem[];
   requestSort: (key: keyof Item | '#') => void;
   sortConfig: SortConfig | null;
 }
@@ -47,7 +48,7 @@ const SortableHeader: React.FC<{
   );
 };
 
-export const ItemTable: React.FC<ItemTableProps> = ({ items, onUpdateItem, categories, locations, requestSort, sortConfig }) => {
+export const ItemTable: React.FC<ItemTableProps> = ({ items, onUpdateItem, onEditItem, onDeleteItem, categories, locations, requestSort, sortConfig }) => {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
@@ -58,6 +59,8 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items, onUpdateItem, categ
             <SortableHeader label="Category" sortKey="category" requestSort={requestSort} sortConfig={sortConfig} />
             <SortableHeader label="Location" sortKey="location" requestSort={requestSort} sortConfig={sortConfig} />
             <th className="px-4 py-3 font-semibold text-sm text-slate-600 dark:text-slate-400">Note</th>
+            {/* Header baru untuk kolom Aksi */}
+            <th className="px-4 py-3 font-semibold text-sm text-slate-600 dark:text-slate-400 text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -67,8 +70,10 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items, onUpdateItem, categ
               item={item} 
               index={index} 
               onUpdateItem={onUpdateItem} 
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
               categories={categories} 
-              locations={locations} // Sekarang prop diteruskan dengan benar
+              locations={locations}
             />
           ))}
         </tbody>

@@ -98,46 +98,52 @@ app.post('/api/items', async (req, res) => {
     } catch (err) { res.status(500).json({ message: 'Error adding item' }); }
 });
 
-// PUT: Memindahkan semua item dari 'Bag' (LOGIKA DIPERBAIKI DI SINI)
+// PUT: Memindahkan semua item dari 'Bag'
 app.put('/api/items/move-all-from-bag', async (req, res) => {
     try {
         const { destination } = req.body;
-        
-        // 1. Dapatkan ID untuk lokasi 'Bag'
-        const [bagLocationRows] = await db.query('SELECT id FROM locations WHERE name = ?', ['Bag']);
-        if (bagLocationRows.length === 0) {
-            return res.status(404).json({ message: "Lokasi 'Bag' tidak ditemukan." });
+        const [location] = await db.query('SELECT id FROM locations WHERE name = ?', ['Bag']);
+        const [destinationLocation] = await db.query('SELECT id FROM locations WHERE name = ?', [destination]);
+        if (!location.length || !destinationLocation.length) {
+            return res.status(400).json({ message: 'Invalid location.' });
         }
-        const bagId = bagLocationRows[0].id;
-
-        // 2. Dapatkan ID untuk lokasi tujuan
-        const [destinationLocationRows] = await db.query('SELECT id FROM locations WHERE name = ?', [destination]);
-        if (destinationLocationRows.length === 0) {
-            return res.status(404).json({ message: `Lokasi tujuan '${destination}' tidak ditemukan.` });
-        }
-        const destinationId = destinationLocationRows[0].id;
-
-        // 3. Jalankan query UPDATE menggunakan ID
-        const [result] = await db.query("UPDATE items SET location_id = ? WHERE location_id = ?", [destinationId, bagId]);
-        res.json({ message: `${result.affectedRows} barang berhasil dipindahkan ke ${destination}.` });
-    } catch (err) {
-        console.error(`❌ [PUT /api/items/move-all-from-bag] Error:`, err);
-        res.status(500).json({ message: 'Error moving items' });
-    }
+        await db.query("UPDATE items SET location_id = ? WHERE location_id = ?", [destinationLocation[0].id, location[0].id]);
+        res.json({ message: `Items moved.` });
+    } catch (err) { res.status(500).json({ message: 'Error moving items' }); }
 });
 
-// PUT: Mengedit satu item
+// PUT: Mengedit satu item (Diperbarui untuk menangani nama & catatan)
 app.put('/api/items/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { location_id, category_id } = req.body;
+        const { location_id, category_id, name, note } = req.body;
+
         if (location_id) {
             await db.query('UPDATE items SET location_id = ? WHERE id = ?', [location_id, id]);
         } else if (category_id) {
             await db.query('UPDATE items SET category_id = ? WHERE id = ?', [category_id, id]);
+        } else if (name || note !== undefined) {
+            // Memperbarui nama dan/atau catatan
+            await db.query('UPDATE items SET name = ?, note = ? WHERE id = ?', [name, note, id]);
+        } else {
+            return res.status(400).json({ message: 'No valid field to update provided.' });
         }
-        res.json({ message: `Item ${id} updated.` });
-    } catch (err) { res.status(500).json({ message: 'Error updating item' }); }
+        res.json({ message: `Item ${id} updated successfully.` });
+    } catch (err) {
+        res.status(500).json({ message: 'Error updating item' });
+    }
+});
+
+// DELETE BARU: Menghapus satu item
+app.delete('/api/items/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.query('DELETE FROM items WHERE id = ?', [id]);
+        res.status(204).send(); // 204 No Content, artinya sukses tapi tidak ada body balasan
+    } catch (err) {
+        console.error(`❌ [DELETE /api/items/${req.params.id}] Error:`, err);
+        res.status(500).json({ message: 'Error deleting item' });
+    }
 });
 
 

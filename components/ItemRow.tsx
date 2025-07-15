@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Item } from '../types';
-// Perhatikan: generateColorFromString diimpor, LOCATION_COLORS tidak lagi
 import { CATEGORY_COLORS, generateColorFromString } from '../constants';
 
 interface DataItem {
@@ -12,13 +11,15 @@ interface ItemRowProps {
   item: Item;
   index: number;
   onUpdateItem: (id: number, updatedValues: { location?: string; category?: string }) => void;
+  onEditItem: (item: Item) => void; // Prop baru untuk membuka modal edit
+  onDeleteItem: (id: number) => void; // Prop baru untuk menghapus
   categories: DataItem[];
   locations: DataItem[];
 }
 
 type EditableField = 'category' | 'location' | null;
 
-const ItemRow: React.FC<ItemRowProps> = ({ item, index, onUpdateItem, categories, locations }) => {
+const ItemRow: React.FC<ItemRowProps> = ({ item, index, onUpdateItem, onEditItem, onDeleteItem, categories, locations }) => {
   const [editing, setEditing] = useState<EditableField>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
 
@@ -43,11 +44,9 @@ const ItemRow: React.FC<ItemRowProps> = ({ item, index, onUpdateItem, categories
     const isEditingThisCell = editing === field;
     const options = field === 'category' ? categories.map(c => c.name) : locations.map(l => l.name);
     const value = item[field];
-    
-    // === LOGIKA WARNA DIPERBARUI DI SINI ===
     const colorClasses = field === 'category' 
       ? (CATEGORY_COLORS[item.category] || 'bg-gray-200') 
-      : generateColorFromString(item.location); // Menggunakan fungsi generator
+      : generateColorFromString(item.location);
 
     return (
       <td className="px-4 py-3 text-sm" onClick={() => !editing && setEditing(field)}>
@@ -81,6 +80,13 @@ const ItemRow: React.FC<ItemRowProps> = ({ item, index, onUpdateItem, categories
       {renderEditableCell('category')}
       {renderEditableCell('location')}
       <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">{item.note}</td>
+      {/* Kolom Aksi Baru */}
+      <td className="px-4 py-3 text-sm text-center">
+        <div className="flex items-center justify-center gap-4">
+          <button onClick={() => onEditItem(item)} className="text-blue-500 hover:text-blue-700 font-semibold">Edit</button>
+          <button onClick={() => onDeleteItem(item.id)} className="text-red-500 hover:text-red-700 font-semibold">Hapus</button>
+        </div>
+      </td>
     </tr>
   );
 };

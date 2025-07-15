@@ -6,6 +6,7 @@ import { ItemTable } from './components/ItemTable';
 import MoveItemsDialog from './components/MoveItemsDialog';
 import { AddItemForm } from './components/AddItemForm';
 import { SettingsPage } from './components/SettingsPage';
+import EditItemDialog from './components/EditItemDialog'; // Import modal edit baru
 
 // Tipe data umum untuk Kategori dan Lokasi
 interface DataItem {
@@ -35,6 +36,9 @@ const App: React.FC = () => {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: '#', direction: 'ascending' });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
+
 
   // --- FUNGSI UNTUK MENGAMBIL DATA ---
   const fetchAllData = useCallback(async () => {
@@ -44,9 +48,6 @@ const App: React.FC = () => {
         fetch('http://localhost:3001/api/categories'),
         fetch('http://localhost:3001/api/locations'),
       ]);
-      if (!itemsRes.ok || !catRes.ok || !locRes.ok) {
-        throw new Error('Salah satu permintaan API gagal');
-      }
       const itemsData = await itemsRes.json();
       const catData = await catRes.json();
       const locData = await locRes.json();
@@ -134,6 +135,30 @@ const App: React.FC = () => {
         body: JSON.stringify({ destination }),
     });
     setIsMoveModalOpen(false);
+  };
+
+  // Handler baru untuk menghapus item
+  const handleDeleteItem = async (id: number) => {
+    // Menggunakan window.confirm untuk konfirmasi dari pengguna
+    if (window.confirm('Apakah Anda yakin ingin menghapus barang ini?')) {
+        await handleApiAction(`http://localhost:3001/api/items/${id}`, { method: 'DELETE' });
+    }
+  };
+
+  // Handler baru untuk membuka modal edit
+  const handleEditItem = (item: Item) => {
+    setEditingItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  // Handler baru untuk menyimpan perubahan dari modal edit
+  const handleSaveItemEdit = async (id: number, updatedValues: { name: string, note: string }) => {
+    await handleApiAction(`http://localhost:3001/api/items/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedValues),
+    });
+    setIsEditModalOpen(false);
   };
   
   // --- LOGIKA FILTER & SORT ---
@@ -226,6 +251,8 @@ const App: React.FC = () => {
                   <ItemTable 
                     items={processedItems} 
                     onUpdateItem={handleUpdateItem} 
+                    onEditItem={handleEditItem}
+                    onDeleteItem={handleDeleteItem}
                     categories={categories}
                     locations={locations}
                     requestSort={requestSort}
@@ -244,6 +271,14 @@ const App: React.FC = () => {
         onConfirm={handleMoveAllFromBag}
         itemCount={itemsInBagCount}
         locations={locations.map(l => l.name)}
+      />
+
+      {/* Modal Edit Baru */}
+      <EditItemDialog
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveItemEdit}
+        item={editingItem}
       />
     </div>
   );
