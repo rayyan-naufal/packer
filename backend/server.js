@@ -19,9 +19,7 @@ app.get('/api/categories', async (req, res) => {
   try {
     const [results] = await db.query('SELECT * FROM categories ORDER BY name');
     res.json(results);
-  } catch (err) {
-    res.status(500).json({ message: 'Error fetching categories' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Error fetching categories' }); }
 });
 app.post('/api/categories', async (req, res) => {
     try {
@@ -87,9 +85,7 @@ app.get('/api/items', async (req, res) => {
         `;
         const [items] = await db.query(query);
         res.json(items);
-    } catch (err) {
-        res.status(500).json({ message: 'Error fetching items' });
-    }
+    } catch (err) { res.status(500).json({ message: 'Error fetching items' }); }
 });
 
 // POST: Menambah item baru
@@ -99,23 +95,31 @@ app.post('/api/items', async (req, res) => {
         const query = 'INSERT INTO items (name, category_id, location_id, note) VALUES (?, ?, ?, ?)';
         await db.query(query, [name, category_id, location_id, note]);
         res.status(201).json({ message: 'Item added' });
-    } catch (err) {
-        res.status(500).json({ message: 'Error adding item' });
-    }
+    } catch (err) { res.status(500).json({ message: 'Error adding item' }); }
 });
 
-// === URUTAN DIPERBAIKI DI SINI ===
-// Rute yang lebih spesifik ('/move-all-from-bag') harus didefinisikan SEBELUM rute yang lebih umum ('/:id').
-
-// PUT: Memindahkan semua item dari 'Bag'
+// PUT: Memindahkan semua item dari 'Bag' (LOGIKA DIPERBAIKI DI SINI)
 app.put('/api/items/move-all-from-bag', async (req, res) => {
     try {
         const { destination } = req.body;
-        if (!destination || !['Bag', 'House', 'Dorm'].includes(destination)) {
-            return res.status(400).json({ message: 'Destination is required and must be valid.' });
+        
+        // 1. Dapatkan ID untuk lokasi 'Bag'
+        const [bagLocationRows] = await db.query('SELECT id FROM locations WHERE name = ?', ['Bag']);
+        if (bagLocationRows.length === 0) {
+            return res.status(404).json({ message: "Lokasi 'Bag' tidak ditemukan." });
         }
-        const [result] = await db.query("UPDATE items SET location = ? WHERE location = 'Bag'", [destination]);
-        res.json({ message: `${result.affectedRows} items moved to ${destination}.` });
+        const bagId = bagLocationRows[0].id;
+
+        // 2. Dapatkan ID untuk lokasi tujuan
+        const [destinationLocationRows] = await db.query('SELECT id FROM locations WHERE name = ?', [destination]);
+        if (destinationLocationRows.length === 0) {
+            return res.status(404).json({ message: `Lokasi tujuan '${destination}' tidak ditemukan.` });
+        }
+        const destinationId = destinationLocationRows[0].id;
+
+        // 3. Jalankan query UPDATE menggunakan ID
+        const [result] = await db.query("UPDATE items SET location_id = ? WHERE location_id = ?", [destinationId, bagId]);
+        res.json({ message: `${result.affectedRows} barang berhasil dipindahkan ke ${destination}.` });
     } catch (err) {
         console.error(`❌ [PUT /api/items/move-all-from-bag] Error:`, err);
         res.status(500).json({ message: 'Error moving items' });
@@ -131,13 +135,9 @@ app.put('/api/items/:id', async (req, res) => {
             await db.query('UPDATE items SET location_id = ? WHERE id = ?', [location_id, id]);
         } else if (category_id) {
             await db.query('UPDATE items SET category_id = ? WHERE id = ?', [category_id, id]);
-        } else {
-            return res.status(400).json({ message: 'No valid field to update provided.' });
         }
         res.json({ message: `Item ${id} updated.` });
-    } catch (err) {
-        res.status(500).json({ message: 'Error updating item' });
-    }
+    } catch (err) { res.status(500).json({ message: 'Error updating item' }); }
 });
 
 
