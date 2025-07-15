@@ -8,7 +8,7 @@ app.use(express.json());
 
 // Koneksi ke database Neon menggunakan URL koneksi
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.postgresql://neondb_owner:npg_9fXQH2MGTSgN@ep-curly-waterfall-a1xha6g8-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require,
   ssl: {
     rejectUnauthorized: false
   }
