@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Item } from '../types';
-// Perhatikan: 'LOCATIONS' sudah dihapus dari baris import di bawah ini
-import { CATEGORY_COLORS, LOCATION_COLORS } from '../constants';
+// Perhatikan: generateColorFromString diimpor, LOCATION_COLORS tidak lagi
+import { CATEGORY_COLORS, generateColorFromString } from '../constants';
 
 interface DataItem {
   id: number;
@@ -41,10 +41,13 @@ const ItemRow: React.FC<ItemRowProps> = ({ item, index, onUpdateItem, categories
 
   const renderEditableCell = (field: 'category' | 'location') => {
     const isEditingThisCell = editing === field;
-    // Gunakan data dinamis dari props
     const options = field === 'category' ? categories.map(c => c.name) : locations.map(l => l.name);
     const value = item[field];
-    const colorClasses = field === 'category' ? (CATEGORY_COLORS[item.category] || 'bg-gray-200') : (LOCATION_COLORS[item.location] || 'bg-gray-200');
+    
+    // === LOGIKA WARNA DIPERBARUI DI SINI ===
+    const colorClasses = field === 'category' 
+      ? (CATEGORY_COLORS[item.category] || 'bg-gray-200') 
+      : generateColorFromString(item.location); // Menggunakan fungsi generator
 
     return (
       <td className="px-4 py-3 text-sm" onClick={() => !editing && setEditing(field)}>
