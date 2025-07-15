@@ -8,10 +8,17 @@ type SortConfig = {
   direction: 'ascending' | 'descending';
 };
 
+// Tipe data umum untuk Kategori dan Lokasi
+interface DataItem {
+  id: number;
+  name: string;
+}
+
 interface ItemTableProps {
   items: Item[];
   onUpdateItem: (id: number, updatedValues: Partial<Item>) => void;
-  categories: { id: number; name: string }[];
+  categories: DataItem[];
+  locations: DataItem[]; // Prop yang hilang sudah ditambahkan di sini
   requestSort: (key: keyof Item | '#') => void;
   sortConfig: SortConfig | null;
 }
@@ -40,7 +47,7 @@ const SortableHeader: React.FC<{
   );
 };
 
-export const ItemTable: React.FC<ItemTableProps> = ({ items, onUpdateItem, categories, requestSort, sortConfig }) => {
+export const ItemTable: React.FC<ItemTableProps> = ({ items, onUpdateItem, categories, locations, requestSort, sortConfig }) => {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
@@ -55,7 +62,14 @@ export const ItemTable: React.FC<ItemTableProps> = ({ items, onUpdateItem, categ
         </thead>
         <tbody>
           {items.map((item, index) => (
-            <ItemRow key={item.id} item={item} index={index} onUpdateItem={onUpdateItem} categories={categories} />
+            <ItemRow 
+              key={item.id} 
+              item={item} 
+              index={index} 
+              onUpdateItem={onUpdateItem} 
+              categories={categories} 
+              locations={locations} // Sekarang prop diteruskan dengan benar
+            />
           ))}
         </tbody>
       </table>
