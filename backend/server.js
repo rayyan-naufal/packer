@@ -118,11 +118,11 @@ app.put('/api/items/:id', async (req, res) => {
         const { id } = req.params;
         const { location_id, category_id, name, note } = req.body;
 
-        if (location_id) {
+        if (location_id !== undefined) {
             await db.query('UPDATE items SET location_id = ? WHERE id = ?', [location_id, id]);
-        } else if (category_id) {
+        } else if (category_id !== undefined) {
             await db.query('UPDATE items SET category_id = ? WHERE id = ?', [category_id, id]);
-        } else if (name || note !== undefined) {
+        } else if (name !== undefined && note !== undefined) {
             // Memperbarui nama dan/atau catatan
             await db.query('UPDATE items SET name = ?, note = ? WHERE id = ?', [name, note, id]);
         } else {
@@ -130,6 +130,7 @@ app.put('/api/items/:id', async (req, res) => {
         }
         res.json({ message: `Item ${id} updated successfully.` });
     } catch (err) {
+        console.error(`❌ [PUT /api/items/${req.params.id}] Error:`, err);
         res.status(500).json({ message: 'Error updating item' });
     }
 });
