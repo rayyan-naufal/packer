@@ -209,7 +209,7 @@ const App: React.FC = () => {
         <header className="mb-8 flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <div className="bg-blue-600 text-white p-2 rounded-lg"><LogoIcon /></div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Student Packer</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Pulang Pergi</h1>
           </div>
           <button onClick={() => setView(view === 'main' ? 'settings' : 'main')} title="Pengaturan" className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
             <SettingsIcon />
